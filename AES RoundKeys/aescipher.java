@@ -138,7 +138,7 @@ public class aescipher {
 				for(int row=0;row<4;row++){
 					roundKey+=WArray[row][col];
 					if((col+1)%4==0 && row==3){
-						System.out.println("Round Key "+roundKey);
+						System.out.println(roundKey.toUpperCase());
 						roundKey="";
 					}
 				}
