@@ -100,28 +100,33 @@ public class AEScipher {
 					+ ex.getMessage());
 		}
 	}
-		
-		protected void stringToMatrix(String plainText) {
-			try {
-				char[] keyChars = plainText.toCharArray();
-				int counter = 0;
 
-				for (int col = 0; col < 4; col++) {
-					for (int row = 0; row < 4; row++) {
-						if (keyChars.length == counter)
-							break;
-						else {
-							plainTextArray[row][col] = Character
-									.toString(keyChars[counter])
-									+ Character.toString(keyChars[counter + 1]);
-							counter = counter + 2;
-						}
+	/*
+	 * COnvert the plaintext that is in string format to a 2D string array.
+	 * plaintext: is the input string from the user.
+	 */
+	protected void stringToMatrix(String plainText) {
+		try {
+			char[] keyChars = plainText.toCharArray();
+			int counter = 0;
+
+			for (int col = 0; col < 4; col++) {
+				for (int row = 0; row < 4; row++) {
+					if (keyChars.length == counter)
+						break;
+					else {
+						plainTextArray[row][col] = Character
+								.toString(keyChars[counter])
+								+ Character.toString(keyChars[counter + 1]);
+						counter = counter + 2;
 					}
 				}
-			} catch (Exception ex) {
-				System.out.println("Exception in aescipher class stringToMatrix(): "
-						+ ex.getMessage());
 			}
+		} catch (Exception ex) {
+			System.out
+					.println("Exception in aescipher class stringToMatrix(): "
+							+ ex.getMessage());
+		}
 	}
 
 	// Copy the first four columns from keyArray
@@ -181,7 +186,7 @@ public class AEScipher {
 				}
 			}
 			// Print the round keys
-			printRoundKeys();
+			//printRoundKeys();
 		} catch (Exception ex) {
 			System.out.println("Exception in class aescipher aesRoundKeys() "
 					+ ex.getMessage());
@@ -257,6 +262,10 @@ public class AEScipher {
 		}
 	}
 
+	/*
+	 * Performs exclusiveOR of two input matrices and returns a matrix. sHex:
+	 * plaintext matrix keyHex:key matrix
+	 */
 	protected String[][] aesStateXOR(String[][] sHex, String[][] keyHex) {
 		try {
 			String[][] outHex = new String[4][4];
@@ -279,6 +288,10 @@ public class AEScipher {
 		}
 	}
 
+	/*
+	 * Substitutes input values with values from Sbox inStateHex: contains
+	 * values that need to be substituted.
+	 */
 	protected String[][] aesNibbleSub(String[][] inStateHex) {
 		String[][] outStateHex = new String[4][4];
 		try {
@@ -296,6 +309,10 @@ public class AEScipher {
 		}
 	}
 
+	/*
+	 * Right Shifts values of every element of the matrix based on the shift
+	 * value inStateHex: input matrix on which shifting needs to be performed.
+	 */
 	protected String[][] aesShiftRow(String[][] inStateHex) {
 		String[][] outStateHex = new String[4][4];
 		try {
@@ -304,7 +321,7 @@ public class AEScipher {
 				for (int col = 0; col < 4; col++) {
 					shift = row;
 					outStateHex[row][col] = inStateHex[row][(col + shift) % 4];
-					//System.out.println(outStateHex[row][col]);
+					// System.out.println(outStateHex[row][col]);
 				}
 			}
 			return outStateHex;
@@ -314,125 +331,156 @@ public class AEScipher {
 		}
 	}
 
-	protected String[][] aesMixColumn(String[][] inStateHex) {
-		String[][] outStateHex = new String[4][4];
+	/*
+	 * Multiplies the 4x4 matrix with the Galios constants inStateHex: value
+	 * that needs to be multiplied with the Galios constant
+	 */
+	protected String[][] newMix(String[][] inStateHex) {
 		try {
-			int value;
+			String[][] outStateHex = new String[4][4];
 			for (int row = 0; row < 4; row++) {
 				for (int col = 0; col < 4; col++) {
-					value = 0;
+					String value = "0";
 					for (int counter = 0; counter < 4; counter++) {
-						if (GALOIS_CONST[row][counter] == 1)
-							value = value
-									^ Integer
-											.parseInt(inStateHex[counter][col],16);
-						else if (GALOIS_CONST[row][counter] == 2) 
-							value=Integer.parseInt(xor(Integer.toString(value),multiplicationByTwo(inStateHex[counter][col])),16);
-						else 
-							value=value^multiplicationbyThree(inStateHex[counter][col]);
+						if (GALOIS_CONST[row][counter] == 1) {
+							value=xor(value,inStateHex[counter][col]);
+						} else if (GALOIS_CONST[row][counter] == 2) {
+							value=xor(value,newMultiply2(inStateHex[counter][col]));
+						} else {
+							String multiplyByTwoVal=xor(inStateHex[counter][col],newMultiply2(inStateHex[counter][col]));
+							value=xor(value,multiplyByTwoVal);
+						}
 					}
-					outStateHex[row][col]=Integer.toHexString(value);
-					System.out.println(outStateHex[row][col]);
+					outStateHex[row][col] = value;
+					//System.out.println(outStateHex[row][col]);
 				}
+				}
+		return outStateHex;
+		} catch (Exception ex) {
+			System.out.println("Error in new mix: " + ex.getMessage());
+			return null;
+		}
+
+	}
+
+	/*
+	 * Performs left shift by 1 to give a value equivalent to multiplication by
+	 * 2 Also if the MSB is 1 then it xor's the value with 1b
+	 */
+	private String newMultiply2(String input) {
+		String output = "";
+		String binary = Integer.toBinaryString(Integer.parseInt(input, 16));
+		// System.out.println(binary);
+
+		// no. of zeroes to pad
+		int zeroReq = 8 - binary.length();
+
+		for (int i = 0; i < zeroReq; i++) {
+			binary = "0" + binary;
+		}
+
+		// Shift to left by 1
+		int binToInt = Integer.parseInt(binary, 2);
+		String shiftInt = Integer.toBinaryString(binToInt << 1);
+		shiftInt = (shiftInt.length() > 8 ? shiftInt.substring(1) : shiftInt);
+
+		if (binary.substring(0, 1).equals("1")) {
+			String constant = Integer.toString(27, 2);
+
+			int len = 8 - constant.length();
+			for (int count = 0; count < len; count++) {
+				constant = "0" + constant;
 			}
 
-			return outStateHex;
+			output = xor(Integer.toHexString(Integer.parseInt(shiftInt, 2)),
+					Integer.toHexString(Integer.parseInt(constant, 2)));
+		} else {
+			output = Integer.toHexString(Integer.parseInt(shiftInt, 2));
+		}
+		return output;
+	}
+
+	/*
+	 * Takes the key and the plaintext to generate the ciphertext.
+	 */
+	protected void aes(String key, String plainText) {
+		try {
+			 int round = 0;
+		      String[][] roundKey = new String[4][4];
+		      String[][] roundData = new String[4][4];
+		      
+			// Generate the round Keys
+			 if(key!="" && plainText!="")
+			 aesRoundKeys(key);
+			 
+			 stringToMatrix(plainText);
+
+			      for (int row = 0; row <WArray.length; row++) {
+			        System.arraycopy(plainTextArray[row], 0, roundData[row], 0, 4);
+			      }
+				   for (int increment = 0; increment < WArray[0].length ; 
+			       increment += 4) {
+			         // Take 4x4 matrix from 4x44 as round keys
+			         for (int row = 0; row < WArray.length; row++) {
+			           System.arraycopy(WArray[row], increment, roundKey[row], 0, 4);
+			         }
+					 if(round == 10)
+						 roundData = aesStateXOR(roundData, roundKey);
+					 else
+					 {
+			         round++;
+			         roundData = calcEachRound(
+			           roundData, roundKey, round);
+					 }
+			       
+			      if (roundData != null) {
+			    	  print(roundData);
+			       }
+			    }
+		
+			
+		
 		} catch (Exception ex) {
-			System.out.println("Exception in aesMixColumn(): "
-					+ ex.getMessage());
-			return null;
+			System.out.println("Exception in aes(): " + ex.getMessage());
 		}
 	}
 	
-	private  String multiplicationByTwo(String input) {
-		try {
-			// convert hex and pad with zeros.
-			int hexVal=Integer.parseInt(input,16);
-			System.out.println(hexVal);
-			String binary=Integer.toBinaryString(hexVal);
-			System.out.println(binary);
+	protected String[][] calcEachRound(
+		    String[][] larRoundData, String[][] larRoundKey, int pintRoundCount) {
+		    String[][] larInputToNextStep;
+		    larInputToNextStep = null;
 
-			//no. of zeroes to pad 
-		    int zeroReq= 8-binary.length();
 		    
-		    for(int i=0;i<zeroReq;i++){
-		          binary="0"+binary;
+		    larInputToNextStep = aesStateXOR(larRoundData, larRoundKey);
+
+		  
+		    if (larInputToNextStep != null) {
+		      larInputToNextStep = aesNibbleSub(larInputToNextStep);
+		    }
+
+		  
+		    if (larInputToNextStep != null) {
+		      larInputToNextStep = aesShiftRow(larInputToNextStep);
+		    }
+
+		    if (pintRoundCount != 10) {
+		      if (larInputToNextStep != null) {
+		        larInputToNextStep = newMix(larInputToNextStep);
+		      }
 		    }
 			
-			System.out.println(binary);
-			// left shift by 1 and get msb
-			String msb = binary.substring(0, 1);
-			//System.out.println(Integer.toHexString(hexVal << 1));
-			int leftShift =hexVal << 1;
-			binary = Integer.toString(leftShift,2);//.substring(1);
-			System.out.println(binary);
-
-			if(msb.equals("1")){
-				
-				//binary = Integer.toString(leftShift,2).substring(1);
-				String constant = Integer.toString(25,2);
-				//System.out.println("binary after shift " +binary);
-				String hello =xor(binary,constant);
-				//System.out.println("xoroutput: " +hello);
-				return hello;
-			} else {
-				
-				//binary = Integer.toString(leftShift,2).substring(1);
-				//System.out.println("witout xoroutput: "+binary);
-				return binary;
-			}
-			
-			
-			/* if (msb.equals("1")) {
-				System.out.println(Integer.parseInt(leftShift,16) ^ 0x1b);
-				return xor(leftShift,"0x1b");
-			} else	
-				return leftShift; */
-
-		} catch (Exception ex) {
-			System.out.println("Error in multiplicationByTwo(): "
-					+ ex.getMessage());
-			return "";
-		}
-	}
-
-private int multiplicationbyThree(String input)
-{
-	try
-	{
-		int multByTwo=Integer.parseInt(multiplicationByTwo(input),16);
-		return multByTwo^Integer.parseInt(input,16);
-	}
-	catch(Exception ex)
-	{
-		System.out.println("Exception in multiplicationbyThree(): "+ex.getMessage());
-		return 0;
-	}
-	}
-
-protected void aes(String key, String plainText)
-{
-	try
-	{
-		//Generate the round Keys
-		aesRoundKeys(key);
-		
-		//convert plaintext to matrix
-		stringToMatrix(plainText);
-	    
-		//Initial Round
-		String[][] tempArray=aesStateXOR(plainTextArray, keyArray);
-		
-		//Rounds
-		tempArray=aesNibbleSub(tempArray);
-		tempArray=aesShiftRow(tempArray);
-		tempArray=aesMixColumn(tempArray);
-		//aesStateXOR(tempArray,)
-	   
-	}
-	catch(Exception ex)
-	{
-		System.out.println("Exception in aes(): "+ex.getMessage());
-	}
-}
+			return larInputToNextStep;
+		  }
+	
+	  private void print(String[][] larRoundData) {
+		    try {
+		      for (int cols = 0; cols < 4; cols++) {
+		        for (int row = 0; row < 4; row++) {
+		          System.out.print(larRoundData[row][cols]);
+		        }
+		      }
+		    } catch (Exception ex) {
+		      System.out.println("Exception in printRoundData is : " + ex.getMessage());
+		    }
+		  }
 }
